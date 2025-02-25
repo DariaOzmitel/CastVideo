@@ -6,7 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.Scaffold
 import com.example.castvideo.ui.theme.CastVideoTheme
-import com.example.ui.CastVideoScreen
+import com.example.ui.screen.CastVideoScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

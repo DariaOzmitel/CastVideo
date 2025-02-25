@@ -2,7 +2,7 @@ package com.example.castvideo
 
 import android.app.Application
 import com.example.data.di.dataModule
-import com.example.di.uiModule
+import com.example.ui.di.uiModule
 import com.example.domain.di.domainModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
