@@ -21,3 +21,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "CastVideo"
 include(":app")
+include(":domain")
+include(":data")
+include(":ui")
