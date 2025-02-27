@@ -35,6 +35,7 @@ android {
 dependencies {
 
     implementation(project(":domain"))
+    implementation (libs.play.services.cast.framework)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.koin.core)

@@ -9,13 +9,15 @@ import com.example.castvideo.ui.theme.CastVideoTheme
 import com.example.ui.screen.CastVideoScreen
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         enableEdgeToEdge()
         setContent {
             CastVideoTheme {
                 Scaffold { innerPadding ->
-                    CastVideoScreen(innerPadding = innerPadding) { }
+                    CastVideoScreen(innerPadding = innerPadding)
                 }
             }
         }
