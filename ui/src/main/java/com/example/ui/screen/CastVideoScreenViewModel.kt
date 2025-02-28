@@ -1,123 +1,59 @@
 package com.example.ui.screen
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import androidx.mediarouter.media.MediaControlIntent
-import androidx.mediarouter.media.MediaRouteSelector
-import androidx.mediarouter.media.MediaRouter
-import com.google.android.gms.cast.MediaInfo
-import com.google.android.gms.cast.MediaLoadRequestData
-import com.google.android.gms.cast.MediaMetadata
-import com.google.android.gms.cast.framework.CastContext
-import com.google.android.gms.cast.framework.CastState
-import com.google.android.gms.cast.framework.CastStateListener
-import com.google.android.gms.cast.framework.media.RemoteMediaClient
-
-enum class CastDeviceState {
-    INITIAL,
-    SEARCHING,
-    CONNECTING,
-    CONNECTED
-}
-
-open class Device(val id: String, val name: String?, val description: String?, val enable: Boolean)
-
-data class ChromeCastDevice(val route: MediaRouter.RouteInfo) :
-    Device(
-        route.id,
-        route.name,
-        route.description,
-        route.isEnabled
-    )
+import androidx.lifecycle.viewModelScope
+import com.example.domain.models.CastDeviceState
+import com.example.domain.usecases.CastVideoUseCase
+import com.example.domain.usecases.GetDeviceListUseCase
+import com.example.domain.usecases.GetDeviceStateUseCase
+import com.example.domain.usecases.SearchChromeCastDeviceUseCase
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 internal class CastVideoScreenViewModel(
-    private val castContext: CastContext,
-    private var mediaRouter: MediaRouter
+    private val searchChromeCastDeviceUseCase: SearchChromeCastDeviceUseCase,
+    private val castVideoUseCase: CastVideoUseCase,
+    private val getDeviceListUseCase: GetDeviceListUseCase,
+    private val getDeviceStateUseCase: GetDeviceStateUseCase
 ) : ViewModel() {
+    private val castVideoScreenStateMutable: MutableStateFlow<CastVideoScreenState> =
+        MutableStateFlow(CastVideoScreenState(deviceState = CastDeviceState.INITIAL))
+    private val castVideoScreenState: StateFlow<CastVideoScreenState> = castVideoScreenStateMutable
 
-    private var urlToPlay by mutableStateOf("")
-
-    var deviceState by mutableStateOf(CastDeviceState.INITIAL)
-    val deviceList = mutableStateListOf<ChromeCastDevice>()
-    var currentDevice by mutableStateOf<ChromeCastDevice?>(null)
-
-    private var remoteMediaClient by mutableStateOf<RemoteMediaClient?>(null)
-
-    fun start() {
-        castContext.addCastStateListener(castStateListener())
-        startSearch()
+    init {
+        getDeviceState()
+        getDeviceList()
     }
 
-    fun connect(url: String, device: ChromeCastDevice) {
-        urlToPlay = url
-        currentDevice = device
+    fun getCastVideoScreenState(): StateFlow<CastVideoScreenState> = castVideoScreenState
 
-        deviceState = CastDeviceState.CONNECTING
-        stopSearch()
-
-        mediaRouter.selectRoute(device.route)
+    fun searchChromeCastDevice() {
+        searchChromeCastDeviceUseCase.invoke()
     }
 
-    private fun startSearch() {
-        val selector = MediaRouteSelector.Builder()
-            .addControlCategory(MediaControlIntent.CATEGORY_REMOTE_PLAYBACK)
-            .build()
-
-        mediaRouter.addCallback(
-            selector,
-            mediaRouterCallBack(),
-            MediaRouter.CALLBACK_FLAG_PERFORM_ACTIVE_SCAN
-        )
-
-
-        deviceState = CastDeviceState.SEARCHING
+    fun connect(id: String) {
+        castVideoUseCase.invoke(id)
     }
 
-    private fun stopSearch() {
-        mediaRouter.removeCallback(mediaRouterCallBack())
-    }
-
-    private fun castStateListener() = CastStateListener {
-        when (it) {
-            CastState.CONNECTED -> {
-                deviceState = CastDeviceState.CONNECTED
-
-                val castSession = castContext.sessionManager.currentCastSession
-
-                remoteMediaClient = castSession?.remoteMediaClient
-                remoteMediaClient?.stop()
-
-                val videoMetadata = MediaMetadata(MediaMetadata.MEDIA_TYPE_MOVIE).apply {
-                    putString(MediaMetadata.KEY_TITLE, urlToPlay)
+    private fun getDeviceState() {
+        viewModelScope.launch {
+            getDeviceStateUseCase.invoke().collect { deviceState ->
+                castVideoScreenStateMutable.update {
+                    it.copy(deviceState = deviceState)
                 }
-
-                val mediaInfo = MediaInfo.Builder(urlToPlay)
-                    .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
-                    .setMetadata(videoMetadata)
-
-                val mediaLoadRequestData = MediaLoadRequestData.Builder()
-                    .setMediaInfo(mediaInfo.build())
-                    .setAutoplay(true)
-
-                remoteMediaClient?.load(mediaLoadRequestData.build())
-
-                stopSearch()
             }
         }
     }
 
-    private fun mediaRouterCallBack() = object : MediaRouter.Callback() {
-        override fun onRouteAdded(router: MediaRouter, route: MediaRouter.RouteInfo) {
-            if (!deviceList.any { it.id == route.id } && route.isEnabled)
-                deviceList.add(ChromeCastDevice(route = route))
-        }
-
-        override fun onRouteRemoved(router: MediaRouter, route: MediaRouter.RouteInfo) {
-            val deviceById = deviceList.find { it.id == route.id }
-            deviceList.remove(deviceById)
+    private fun getDeviceList() {
+        viewModelScope.launch {
+            getDeviceListUseCase.invoke().collect{ deviceList ->
+                castVideoScreenStateMutable.update {
+                    it.copy(deviceList = deviceList)
+                }
+            }
         }
     }
 }

@@ -6,11 +6,11 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.example.ui.screen.ChromeCastDevice
+import com.example.domain.models.ChromeCastDeviceDomain
 
 @Composable
 internal fun DeviceItem(
-    device: ChromeCastDevice,
+    device: ChromeCastDeviceDomain,
     icon: @Composable (() -> Unit),
     loading: Boolean = false,
     onClick: (() -> Unit)? = null,
